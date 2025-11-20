@@ -7,6 +7,8 @@ import https from 'node:https';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { promisify } from 'node:util';
+import AdmZip from 'adm-zip';
+import { glob } from 'glob';
 
 const execAsync = promisify(exec);
 
@@ -119,46 +121,41 @@ class OpenSCADLibrariesPlugin {
         await this.ensureDir(path.dirname(outputPath));
 
         const fullSourceDir = path.join(sourceDir, workingDir);
+        const zip = new AdmZip();
 
-        // Build find command for includes
-        let findCmd = '';
-        if (includes.length > 0) {
-            const findPatterns = includes.map(pattern => {
-                if (pattern.includes('**/*.')) {
-                    const parts = pattern.split('/');
-                    const dir = parts[0];
-                    const filePattern = parts[parts.length - 1];
-                    return `-path "./${dir}/*" -name "${filePattern}"`;
-                } else if (pattern.includes('**')) {
-                    const filePattern = pattern.replace('**/', '');
-                    return `-name "${filePattern}"`;
-                } else if (pattern.includes('*')) {
-                    return `-name "${pattern}"`;
-                } else if (pattern.includes('/')) {
-                    return `-path "./${pattern}"`;
-                } else {
-                    return `-name "${pattern}" -o -path "./${pattern}/*"`;
-                }
-            }).join(' -o ');
-            findCmd = `find . \\( ${findPatterns} \\)`;
-        } else {
-            findCmd = 'find . -name "*.scad"';
-        }
+        console.log(`Creating zip: ${outputPath} from ${fullSourceDir}`);
 
-        // Add excludes
-        if (excludes.length > 0) {
-            const excludePatterns = excludes.map(pattern => {
-                const cleanPattern = pattern.replace('**/', '').replace('/**', '');
-                return `-not -path "*/${cleanPattern}*"`;
-            }).join(' ');
-            findCmd += ` ${excludePatterns}`;
-        }
+        // If no includes specified, default to *.scad
+        const patterns = includes.length > 0 ? includes : ['*.scad'];
 
-        const zipCmd = `cd ${fullSourceDir} && ${findCmd} | zip -r ${path.resolve(outputPath)} -@`;
+        // Convert excludes to glob ignore pattern
+        const ignore = excludes.map(p => {
+            // glob ignore patterns don't support the same syntax as find, 
+            // but generally standard globs work. 
+            // We might need to adjust if patterns are complex.
+            return p;
+        });
 
-        console.log(`Creating zip: ${outputPath}`);
         try {
-            await execAsync(zipCmd);
+            const files = await glob(patterns, {
+                cwd: fullSourceDir,
+                ignore: ignore,
+                nodir: true,
+                dot: true
+            });
+
+            if (files.length === 0) {
+                console.warn(`No files found to zip in ${fullSourceDir}`);
+            }
+
+            for (const file of files) {
+                const filePath = path.join(fullSourceDir, file);
+                const zipPath = path.dirname(file);
+                // Add file to zip, preserving relative structure
+                zip.addLocalFile(filePath, zipPath === '.' ? '' : zipPath);
+            }
+
+            await zip.writeZipPromise(outputPath);
         } catch (error) {
             console.error(`Failed to create zip ${outputPath}:`, error.message);
             throw error;
@@ -172,12 +169,36 @@ class OpenSCADLibrariesPlugin {
 
         await this.ensureDir(this.libsDir);
 
-        if (!existsSync(wasmDir)) {
+        // Check if we need to download/extract
+        const jsFile = path.join(wasmDir, 'openscad.js');
+        const wasmFile = path.join(wasmDir, 'openscad.wasm');
+
+        if (!existsSync(wasmDir) || !existsSync(jsFile) || !existsSync(wasmFile)) {
+            // Clean up potential partial install
+            try { await fs.rm(wasmDir, { recursive: true, force: true }); } catch { }
             await this.ensureDir(wasmDir);
+
             await this.downloadFile(wasmBuild.url, wasmZip);
 
             console.log(`Extracting WASM to ${wasmDir}`);
-            await execAsync(`cd ${wasmDir} && unzip ../${path.basename(wasmZip)}`);
+            const zip = new AdmZip(wasmZip);
+            zip.extractAllTo(wasmDir, true);
+
+            // Verify extraction
+            if (!existsSync(jsFile)) {
+                // Check if it's in a subfolder (some zips have a root folder)
+                const entries = zip.getEntries();
+                const rootDir = entries[0].entryName.split('/')[0];
+                if (rootDir && existsSync(path.join(wasmDir, rootDir, 'openscad.js'))) {
+                    // Move files up
+                    const subDir = path.join(wasmDir, rootDir);
+                    const files = await fs.readdir(subDir);
+                    for (const file of files) {
+                        await fs.rename(path.join(subDir, file), path.join(wasmDir, file));
+                    }
+                    await fs.rm(subDir, { recursive: true, force: true });
+                }
+            }
         }
 
         await this.ensureDir('public');
@@ -185,23 +206,25 @@ class OpenSCADLibrariesPlugin {
         const jsTarget = 'public/openscad.js';
         const wasmTarget = 'public/openscad.wasm';
 
-        // Remove existing symlinks/files
-        try {
-            await fs.unlink(jsTarget);
-        } catch { /* ignore */ }
-        try {
-            await fs.unlink(wasmTarget);
-        } catch { /* ignore */ }
+        // Remove existing files
+        try { await fs.unlink(jsTarget); } catch { }
+        try { await fs.unlink(wasmTarget); } catch { }
 
-        // Create new symlinks
-        await fs.symlink(path.relative('public', path.join(wasmDir, 'openscad.js')), jsTarget);
-        await fs.symlink(path.relative('public', path.join(wasmDir, 'openscad.wasm')), wasmTarget);
+        // Copy files instead of symlink for better Windows support
+        await fs.copyFile(path.join(wasmDir, 'openscad.js'), jsTarget);
+        await fs.copyFile(path.join(wasmDir, 'openscad.wasm'), wasmTarget);
 
-        // Create src/wasm symlink
+        // Handle src/wasm
+        // Instead of symlink, we might need to copy or just leave it if it's not strictly needed for dev
+        // But let's try to copy the directory content if it doesn't exist
         try {
-            await fs.unlink(this.srcWasmDir);
-        } catch { /* ignore */ }
-        await fs.symlink(path.relative('src', wasmDir), this.srcWasmDir);
+            await fs.rm(this.srcWasmDir, { recursive: true, force: true });
+        } catch { }
+
+        await this.ensureDir(this.srcWasmDir);
+        // Copy contents of wasmDir to srcWasmDir
+        // recursive copy is available in Node 16.7+
+        await fs.cp(wasmDir, this.srcWasmDir, { recursive: true });
 
         console.log('WASM setup completed');
     }
@@ -232,9 +255,32 @@ class OpenSCADLibrariesPlugin {
         await this.ensureDir(this.publicLibsDir);
 
         console.log('Creating fonts.zip');
-        const fontsCmd = `zip -r ${fontsZip} -j fonts.conf libs/noto/*.ttf libs/liberation/*.ttf libs/liberation/LICENSE libs/liberation/AUTHORS`;
-        await execAsync(fontsCmd);
+        const zip = new AdmZip();
 
+        // Add fonts.conf
+        if (existsSync('fonts.conf')) {
+            zip.addLocalFile('fonts.conf');
+        }
+
+        // Add Noto fonts
+        const notoFiles = await glob('*.ttf', { cwd: notoDir });
+        for (const file of notoFiles) {
+            zip.addLocalFile(path.join(notoDir, file));
+        }
+
+        // Add Liberation fonts and licenses
+        const libFiles = await glob('*.ttf', { cwd: liberationDir });
+        for (const file of libFiles) {
+            zip.addLocalFile(path.join(liberationDir, file));
+        }
+        if (existsSync(path.join(liberationDir, 'LICENSE'))) {
+            zip.addLocalFile(path.join(liberationDir, 'LICENSE'));
+        }
+        if (existsSync(path.join(liberationDir, 'AUTHORS'))) {
+            zip.addLocalFile(path.join(liberationDir, 'AUTHORS'));
+        }
+
+        await zip.writeZipPromise(fontsZip);
         console.log('Fonts setup completed');
     }
 
@@ -275,20 +321,17 @@ class OpenSCADLibrariesPlugin {
             'build',
             'public/openscad.js',
             'public/openscad.wasm',
-            `${this.publicLibsDir}/*.zip`,
             this.srcWasmDir
         ];
 
         for (const cleanPath of cleanPaths) {
-            try {
-                if (cleanPath.includes('*')) {
-                    await execAsync(`rm -f ${cleanPath}`);
-                } else {
-                    await fs.rm(cleanPath, { recursive: true, force: true });
-                }
-            } catch {
-                // Ignore errors for files that don't exist
-            }
+            await fs.rm(cleanPath, { recursive: true, force: true });
+        }
+
+        // Clean zips in public/libraries
+        const zips = await glob(`${this.publicLibsDir}/*.zip`);
+        for (const zip of zips) {
+            await fs.unlink(zip);
         }
 
         console.log('Clean completed');
