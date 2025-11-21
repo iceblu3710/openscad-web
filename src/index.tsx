@@ -2,11 +2,11 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import {App} from './components/App.tsx';
+import { App } from './components/App.tsx';
 import { createEditorFS } from './fs/filesystem.ts';
 import { registerOpenSCADLanguage } from './language/openscad-register-language.ts';
 import { zipArchives } from './fs/zip-archives.ts';
-import {readStateFromFragment} from './state/fragment-state.ts'
+import { readStateFromFragment } from './state/fragment-state.ts'
 import { createInitialState } from './state/initial-state.ts';
 import './index.css';
 
@@ -14,6 +14,10 @@ import debug from 'debug';
 import { isInStandaloneMode, registerCustomAppHeightCSSProperty } from './utils.ts';
 import { State, StatePersister } from './state/app-state.ts';
 import { writeStateInFragment } from "./state/fragment-state.ts";
+
+import { initializeIcons } from '@fluentui/react/lib/Icons';
+
+initializeIcons();
 
 import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -36,32 +40,32 @@ window.addEventListener('load', async () => {
   //*
   if (process.env.NODE_ENV === 'production') {
     if ('serviceWorker' in navigator) {
-        try {
-            const registration = await navigator.serviceWorker.register('./sw.js');
-            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+      try {
+        const registration = await navigator.serviceWorker.register('./sw.js');
+        console.log('ServiceWorker registration successful with scope: ', registration.scope);
 
-            registration.onupdatefound = () => {
-                const installingWorker = registration.installing;
-                if (installingWorker) {
-                  installingWorker.onstatechange = () => {
-                      if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                          // Reload to activate the service worker and apply caching
-                          window.location.reload();
-                          return;
-                      }
-                  };
-                }
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Reload to activate the service worker and apply caching
+                window.location.reload();
+                return;
+              }
             };
-        } catch (err) {
-            console.log('ServiceWorker registration failed: ', err);
-        }
+          }
+        };
+      } catch (err) {
+        console.log('ServiceWorker registration failed: ', err);
+      }
     }
   }
   //*/
-  
+
   registerCustomAppHeightCSSProperty();
 
-  const fs = await createEditorFS({prefix: '/libraries/', allowPersistence: isInStandaloneMode()});
+  const fs = await createEditorFS({ allowPersistence: isInStandaloneMode() });
 
   await registerOpenSCADLanguage(fs, '/', zipArchives);
 
@@ -71,15 +75,15 @@ window.addEventListener('load', async () => {
   if (isInStandaloneMode()) {
     const fs: FS = BrowserFS.BFSRequire('fs')
     try {
-      const data = JSON.parse(new TextDecoder("utf-8").decode(fs.readFileSync('/state.json')));
-      const {view, params} = data
-      persistedState = {view, params};
+      const data = JSON.parse(new TextDecoder("utf-8").decode(fs.readFileSync('/home/state.json')));
+      const { view, params } = data
+      persistedState = { view, params };
     } catch (e) {
       console.log('Failed to read the persisted state from local storage.', e)
     }
     statePersister = {
-      set: async ({view, params}) => {
-        fs.writeFile('/state.json', JSON.stringify({view, params}));
+      set: async ({ view, params }) => {
+        fs.writeFile('/home/state.json', JSON.stringify({ view, params }));
       }
     };
   } else {

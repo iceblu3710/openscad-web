@@ -14,20 +14,20 @@ type SyntaxCheckArgs = {
   activePath: string,
   sources: Source[],
 }
-type SyntaxCheckOutput = {logText: string, markers: monaco.editor.IMarkerData[], parameterSet?: ParameterSet};
+type SyntaxCheckOutput = { logText: string, markers: monaco.editor.IMarkerData[], parameterSet?: ParameterSet };
 export const checkSyntax =
   turnIntoDelayableExecution(syntaxDelay, (sargs: SyntaxCheckArgs) => {
     const {
       activePath,
       sources,
     } = sargs;
-    
+
     const content = '$preview=true;\n' + sources[0].content;
 
-    const outFile = 'out.json';
+    const outFile = '/home/out.json';
     const job = spawnOpenSCAD({
       mountArchives: true,
-      inputs: sources,
+      inputs: sources.map(s => s.path === activePath ? { path: s.path, content } : s),
       args: [activePath, "-o", outFile, "--export-format=param"],
       outputPaths: [outFile],
     }, (streams) => {
@@ -55,10 +55,12 @@ export const checkSyntax =
           }
 
           res({
-            ...processMergedOutputs(result.mergedOutputs, {shiftSourceLines: {
-              sourcePath: sources[0].path,
-              skipLines: 1,
-            }}),
+            ...processMergedOutputs(result.mergedOutputs, {
+              shiftSourceLines: {
+                sourcePath: sources[0].path,
+                skipLines: 1,
+              }
+            }),
             parameterSet,
           });
         } catch (e) {
@@ -75,12 +77,13 @@ export type RenderOutput = {
   outFile: File,
   logText: string,
   markers: monaco.editor.IMarkerData[],
-  elapsedMillis: number}
+  elapsedMillis: number
+}
 
 export type RenderArgs = {
   scadPath: string,
   sources: Source[],
-  vars?: {[name: string]: any},
+  vars?: { [name: string]: any },
   features?: string[],
   extraArgs?: string[],
   isPreview: boolean,
@@ -99,7 +102,7 @@ function formatValue(any: any): string {
   }
 }
 export const render =
- turnIntoDelayableExecution(renderDelay, (renderArgs: RenderArgs) => {
+  turnIntoDelayableExecution(renderDelay, (renderArgs: RenderArgs) => {
     const {
       scadPath,
       sources,
@@ -110,7 +113,7 @@ export const render =
       extraArgs,
       renderFormat,
       streamsCallback,
-    }  = renderArgs;
+    } = renderArgs;
 
     const prefixLines: string[] = [];
     if (isPreview) {
@@ -118,7 +121,7 @@ export const render =
       prefixLines.push('$preview=true;');
     }
     if (!scadPath.endsWith('.scad')) throw new Error('First source must be a .scad file, got ' + sources[0].path + ' instead');
-    
+
     const source = sources.filter(s => s.path === scadPath)[0];
     if (!source) throw new Error('Active path not found in sources!');
 
@@ -127,7 +130,7 @@ export const render =
 
     const actualRenderFormat = renderFormat == 'glb' || renderFormat == '3mf' ? 'off' : renderFormat;
     const stem = scadPath.replace(/\.scad$/, '').split('/').pop();
-    const outFile = `${stem}.${actualRenderFormat}`;
+    const outFile = `/home/${stem}.${actualRenderFormat}`;
     const args = [
       scadPath,
       "-o", outFile,
@@ -137,10 +140,10 @@ export const render =
       ...(features ?? []).map(f => `--enable=${f}`),
       ...(extraArgs ?? [])
     ]
-    
+
     const job = spawnOpenSCAD({
       mountArchives: mountArchives,
-      inputs: sources.map(s => s.path === scadPath ? {path: s.path, content} : s),
+      inputs: sources.map(s => s.path === scadPath ? { path: s.path, content } : s),
       args,
       outputPaths: [outFile],
     }, streamsCallback);
@@ -151,17 +154,17 @@ export const render =
           const result = await job;
           // console.log(result);
 
-          const {logText, markers} = processMergedOutputs(result.mergedOutputs, {
+          const { logText, markers } = processMergedOutputs(result.mergedOutputs, {
             shiftSourceLines: {
               sourcePath: source.path,
               skipLines: prefixLines.length
             }
           });
-    
+
           if (result.error) {
             reject(result.error);
           }
-          
+
           const [output] = result.outputs ?? [];
           if (!output) {
             reject(new Error('No output from runner!'));
@@ -174,8 +177,8 @@ export const render =
           // TODO: have the runner accept and return files.
           const type = filePath.endsWith('.svg') ? 'image/svg+xml' : 'application/octet-stream';
           let blob = new Blob([content]);
-          let outFile = new File([blob], fileName, {type});
-          resolve({outFile, logText, markers, elapsedMillis: result.elapsedMillis});
+          let outFile = new File([blob], fileName, { type });
+          resolve({ outFile, logText, markers, elapsedMillis: result.elapsedMillis });
         } catch (e) {
           console.error(e);
           reject(e);

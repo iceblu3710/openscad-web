@@ -3,15 +3,15 @@
 import defaultScad from './default-scad.ts';
 import { State } from './app-state.ts';
 
-export const defaultSourcePath = '/playground.scad';
+export const defaultSourcePath = '/home/playground.scad';
 export const defaultModelColor = '#f9d72c';
 const defaultBlurhash = "|KSPX^%3~qtjMx$lR*x]t7n,R%xuxbM{WBt7ayfk_3bY9FnAt8XOxanjNF%fxbMyIn%3t7NFoLaeoeV[WBo{xar^IoS1xbxcR*S0xbofRjV[j[kCNGofxaWBNHW-xasDR*WTkBxuWBM{s:t7bYahRjfkozWUadofbIW:jZ";
-  
-export function createInitialState(state: State | null, source?: {content?: string, path?: string, url?: string, blurhash?: string}): State {
+
+export function createInitialState(state: State | null, source?: { content?: string, path?: string, url?: string, blurhash?: string }): State {
 
   type Mode = State['view']['layout']['mode'];
-  
-  const mode: Mode = window.matchMedia("(min-width: 768px)").matches 
+
+  const mode: Mode = window.matchMedia("(min-width: 768px)").matches
     ? 'multi' : 'single';
 
   let initialState: State;
@@ -34,7 +34,7 @@ export function createInitialState(state: State | null, source?: {content?: stri
     initialState = {
       params: {
         activePath,
-        sources: [{path: activePath, content, url}],
+        sources: [{ path: activePath, content, url }],
         features: [],
         exportFormat2D: 'svg',
         exportFormat3D: 'stl',
@@ -49,7 +49,7 @@ export function createInitialState(state: State | null, source?: {content?: stri
 
         color: defaultModelColor,
       },
-      preview: blurhash ? {blurhash} : undefined,
+      preview: blurhash ? { blurhash } : undefined,
     };
   }
 
@@ -66,7 +66,7 @@ export function createInitialState(state: State | null, source?: {content?: stri
         mode,
         focus: initialState.view.layout.viewer ? 'viewer'
           : initialState.view.layout.customizer ? 'customizer'
-          : 'editor'
+            : 'editor'
       }
     }
   }
@@ -77,11 +77,11 @@ export function createInitialState(state: State | null, source?: {content?: stri
   // if (initialState.params.sourcePath !== defaultSourcePath) {
   //   fs.writeFile(defaultSourcePath, defaultScad);
   // }
-  
+
   const defaultFeatures = ['lazy-union'];
   defaultFeatures.forEach(f => {
     if (initialState.params.features.indexOf(f) < 0)
-    initialState.params.features.push(f);
+      initialState.params.features.push(f);
   });
 
   return initialState;
@@ -90,6 +90,6 @@ export function createInitialState(state: State | null, source?: {content?: stri
 export function getBlankProjectState() {
   return createInitialState(null, {
     path: defaultSourcePath,
-    content: defaultScad, 
+    content: defaultScad,
   });
 }

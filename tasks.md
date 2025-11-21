@@ -1,0 +1,42 @@
+  - [ ] Setup basic message passing (Main <-> Worker) <!-- id: 25 -->
+  - [ ] **Verify**: Console logs confirm successful worker communication <!-- id: 26 -->
+- [ ] **Feature 7: Compilation Loop** <!-- id: 27 -->
+  - [ ] Implement "Compile" button action in Ribbon <!-- id: 28 -->
+  - [ ] Send editor content to Worker on compile <!-- id: 29 -->
+  - [ ] **Verify**: Clicking compile logs the editor content in the worker <!-- id: 30 -->
+  - [ ] Setup basic message passing (Main <-> Worker) <!-- id: 25 -->
+  - [ ] **Verify**: Console logs confirm successful worker communication <!-- id: 26 -->
+- [ ] **Feature 7: Compilation Loop** <!-- id: 27 -->
+  - [ ] Implement "Compile" button action in Ribbon <!-- id: 28 -->
+  - [ ] Send editor content to Worker on compile <!-- id: 29 -->
+  - [ ] Setup basic message passing (Main <-> Worker) <!-- id: 25 -->
+  - [ ] **Verify**: Console logs confirm successful worker communication <!-- id: 26 -->
+- [ ] **Feature 7: Compilation Loop** <!-- id: 27 -->
+  - [ ] Implement "Compile" button action in Ribbon <!-- id: 28 -->
+  - [ ] Send editor content to Worker on compile <!-- id: 29 -->
+  - [ ] **Verify**: Clicking compile logs the editor content in the worker <!-- id: 30 -->
+  - [ ] Setup basic message passing (Main <-> Worker) <!-- id: 25 -->
+  - [ ] **Verify**: Console logs confirm successful worker communication <!-- id: 26 -->
+- [ ] **Feature 7: Compilation Loop** <!-- id: 27 -->
+  - [ ] Implement "Compile" button action in Ribbon <!-- id: 28 -->
+  - [ ] Send editor content to Worker on compile <!-- id: 29 -->
+  - [ ] **Verify**: Clicking compile logs the editor content in the worker <!-- id: 30 -->
+- [ ] **Feature 8: Geometry Rendering** <!-- id: 31 -->
+  - [ ] Integrate OpenSCAD WASM into the worker <!-- id: 32 -->
+  - [ ] Implement mesh generation and transfer to main thread <!-- id: 33 -->
+  - [ ] Update Three.js scene with generated mesh <!-- id: 34 -->
+  - [ ] **Verify**: Compiling SCAD code renders the actual shape in the viewport <!-- id: 35 -->
+- [x] **Feature 4: 3D Viewport Foundation** <!-- id: 14 -->
+  - [x] Create `Viewport` component <!-- id: 15 -->
+  - [x] Initialize Three.js Scene, Camera, and Renderer <!-- id: 16 -->
+  - [x] Register `Viewport` with GoldenLayout <!-- id: 17 -->
+  - [x] **Verify**: Viewport panel displays a basic 3D cube <!-- id: 18 -->
+- [ ] **Feature 9: Console & Debug Panels** <!-- id: 36 -->
+  - [ ] Create `ConsolePanel` to display logs/errors <!-- id: 37 -->
+  - [ ] Create `DebugPanel` for stats <!-- id: 38 -->
+  - [ ] Register both with GoldenLayout <!-- id: 39 -->
+  - [ ] **Verify**: Panels appear and display dummy data <!-- id: 40 -->
+- [ ] **Feature 10: Layout Persistence & Polish** <!-- id: 41 -->
+  - [ ] Implement `localStorage` saving for GoldenLayout state <!-- id: 42 -->
+  - [ ] Add Dark/Light theme toggle <!-- id: 43 -->
+  - [ ] **Verify**: Layout restores after refresh; Theme toggles correctly <!-- id: 44 -->
