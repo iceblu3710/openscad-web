@@ -1,66 +1,86 @@
-import React from 'react';
-import { Pivot, PivotItem } from '@fluentui/react/lib/Pivot';
-import { CommandBar, ICommandBarItemProps } from '@fluentui/react/lib/CommandBar';
-
-const homeItems: ICommandBarItemProps[] = [
-    {
-        key: 'newItem',
-        text: 'New',
-        iconProps: { iconName: 'Add' },
-        onClick: () => console.log('New'),
-    },
-    {
-        key: 'openItem',
-        text: 'Open',
-        iconProps: { iconName: 'OpenFile' },
-        onClick: () => console.log('Open'),
-    },
-    {
-        key: 'saveItem',
-        text: 'Save',
-        iconProps: { iconName: 'Save' },
-        onClick: () => console.log('Save'),
-    },
-    {
-        key: 'compileItem',
-        text: 'Compile',
-        iconProps: { iconName: 'Processing' },
-        onClick: () => console.log('Compile'),
-    },
-];
-
-const viewItems: ICommandBarItemProps[] = [
-    {
-        key: 'resetView',
-        text: 'Reset View',
-        iconProps: { iconName: 'Refresh' },
-        onClick: () => console.log('Reset View'),
-    },
-    {
-        key: 'toggleAxes',
-        text: 'Toggle Axes',
-        iconProps: { iconName: 'ToggleRight' },
-        onClick: () => console.log('Toggle Axes'),
-    },
-];
+import React, { useState } from 'react';
+import { useLayout } from './LayoutContext';
 
 export const Ribbon: React.FC = () => {
+    const { changeView, resetLayout, updateComponentState, triggerAction } = useLayout();
+    const [activeTab, setActiveTab] = useState<'File' | 'View'>('File');
+
     return (
-        <div style={{ borderBottom: '1px solid #ccc' }}>
-            <Pivot aria-label="Ribbon Tabs">
-                <PivotItem headerText="Home">
-                    <CommandBar
-                        items={homeItems}
-                        ariaLabel="Home actions"
-                    />
-                </PivotItem>
-                <PivotItem headerText="View">
-                    <CommandBar
-                        items={viewItems}
-                        ariaLabel="View actions"
-                    />
-                </PivotItem>
-            </Pivot>
+        <div id="ribbon-container">
+            <div className="ribbon-tabs">
+                <div
+                    className={`ribbon-tab ${activeTab === 'File' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('File')}
+                >
+                    File
+                </div>
+                <div
+                    className={`ribbon-tab ${activeTab === 'View' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('View')}
+                >
+                    View
+                </div>
+            </div>
+
+            <div className="ribbon-content">
+                {activeTab === 'File' && (
+                    <>
+                        <div className="ribbon-group">
+                            <button className="ribbon-btn">
+                                <span className="ribbon-btn-icon">📄</span>
+                                New
+                            </button>
+                            <button className="ribbon-btn">
+                                <span className="ribbon-btn-icon">📂</span>
+                                Open
+                            </button>
+                        </div>
+                        <div className="separator"></div>
+                        <div className="ribbon-group">
+                            <button className="ribbon-btn">
+                                <span className="ribbon-btn-icon">💾</span>
+                                Save
+                            </button>
+                            <button className="ribbon-btn">
+                                <span className="ribbon-btn-icon">📑</span>
+                                Save As
+                            </button>
+                        </div>
+                        <div className="separator"></div>
+                        <div className="ribbon-group">
+                            <button className="ribbon-btn">
+                                <span className="ribbon-btn-icon">📤</span>
+                                Export
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {activeTab === 'View' && (
+                    <>
+                        <div className="ribbon-group">
+                            <button className="ribbon-btn" onClick={() => changeView('Free')}>Free Cam</button>
+                            <button className="ribbon-btn" onClick={() => changeView('Front')}>Front</button>
+                            <button className="ribbon-btn" onClick={() => changeView('Back')}>Back</button>
+                            <button className="ribbon-btn" onClick={() => changeView('Left')}>Left</button>
+                            <button className="ribbon-btn" onClick={() => changeView('Right')}>Right</button>
+                            <button className="ribbon-btn" onClick={() => changeView('Top')}>Top</button>
+                            <button className="ribbon-btn" onClick={() => changeView('Bottom')}>Bottom</button>
+                        </div>
+                        <div className="separator"></div>
+                        <div className="ribbon-group">
+                            <button className="ribbon-btn" onClick={() => updateComponentState({ cameraType: 'Orthographic' })}>Orthogonal</button>
+                            <button className="ribbon-btn" onClick={() => updateComponentState({ cameraType: 'Perspective' })}>Projection</button>
+                        </div>
+                        <div className="separator"></div>
+                        <div className="ribbon-group">
+                            <button className="ribbon-btn" onClick={() => triggerAction('toggleGrid')}>Grid</button>
+                            <button className="ribbon-btn" onClick={() => triggerAction('toggleAxes')}>Axis</button>
+                            <button className="ribbon-btn" onClick={() => triggerAction('fitToView')}>Fit to View</button>
+                        </div>
+                    </>
+                )}
+            </div>
         </div>
     );
 };

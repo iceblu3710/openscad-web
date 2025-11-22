@@ -12,6 +12,7 @@ import { ConfirmDialog } from 'primereact/confirmdialog';
 import CustomizerPanel from './CustomizerPanel';
 import { LayoutManager } from './LayoutManager';
 import { Ribbon } from './Ribbon';
+import { LayoutProvider } from './LayoutContext';
 
 declare var BrowserFS: any;
 
@@ -108,22 +109,16 @@ export function App({ initialState, statePersister, fs }: { initialState: State,
   };
 
   return (
-    <ModelContext.Provider value={model}>
-      <FSContext.Provider value={fs}>
-        <div className='flex flex-column' style={{
-          flex: 1,
-          height: '100vh',
-          overflow: 'hidden'
-        }} onDragOver={handleDragOver} onDrop={handleDrop}>
-
-          <Ribbon />
-          <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
+    <LayoutProvider>
+      <ModelContext.Provider value={model}>
+        <FSContext.Provider value={fs}>
+          <div id="app-wrapper">
+            <Ribbon />
             <LayoutManager model={model} fs={fs} />
+            <ConfirmDialog />
           </div>
-
-          <ConfirmDialog />
-        </div>
-      </FSContext.Provider>
-    </ModelContext.Provider>
+        </FSContext.Provider>
+      </ModelContext.Provider>
+    </LayoutProvider>
   );
 }

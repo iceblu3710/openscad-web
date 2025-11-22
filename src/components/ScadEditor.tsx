@@ -5,6 +5,8 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { ModelContext } from './contexts';
 import openscadEditorOptions from '../language/openscad-editor-options';
 
+import { registerTheme } from '../language/monaco-theme';
+
 // Check for Monaco support (same as EditorPanel)
 const isMonacoSupported = (() => {
     const ua = window.navigator.userAgent;
@@ -13,9 +15,7 @@ const isMonacoSupported = (() => {
 })();
 
 let monacoInstance: Monaco | null = null;
-if (isMonacoSupported) {
-    loader.init().then(mi => monacoInstance = mi);
-}
+// Global loader init removed in favor of beforeMount in component
 
 export const ScadEditor: React.FC = () => {
     const model = useContext(ModelContext);
@@ -70,8 +70,23 @@ export const ScadEditor: React.FC = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, [editor]);
 
+    const handleBeforeMount = (monaco: Monaco) => {
+        monacoInstance = monaco;
+        registerTheme(monaco);
+    };
+
     return (
-        <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+        <div
+            style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}
+            onDragOverCapture={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }}
+            onDropCapture={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }}
+        >
             {isMonacoSupported && (
                 <Editor
                     className="openscad-editor"
@@ -79,13 +94,16 @@ export const ScadEditor: React.FC = () => {
                     path={state.params.activePath}
                     value={model.source}
                     onChange={s => model.source = s ?? ''}
+                    beforeMount={handleBeforeMount}
                     onMount={onMount}
                     options={{
                         ...openscadEditorOptions,
                         fontSize: 16,
                         lineNumbers: state.view.lineNumbers ? 'on' : 'off',
                         automaticLayout: true, // Let Monaco handle resizing
+                        dragAndDrop: false, // Prevent GoldenLayout drags from inserting text
                     }}
+                    theme="solarized-dark"
                 />
             )}
             {!isMonacoSupported && (
